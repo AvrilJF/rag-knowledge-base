@@ -79,7 +79,7 @@ async def upload_doc(file: UploadFile = File(..., description="支持PDF/Word/TX
         # 拼接文件保存路径：uploads/文件名
         file_path = f"uploads/{file.filename}"#f是Python的字符串格式化符号，让字符串里的{变量}能被自动替换成真实的值
         
-        # 以二进制写入模式(writebinary)打开文件，with:自动帮忙开关文件
+        # 以二进制写入模式(write binary)打开文件，with:自动帮忙开关文件
         with open(file_path, "wb") as f:#f:给打开的文件起的小名
             f.write(await file.read())#把用户上传的文件内容写入本地
         
