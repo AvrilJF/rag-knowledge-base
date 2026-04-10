@@ -28,21 +28,25 @@
 - 上传 PDF / Word / TXT
 - 自动提取文本、清理乱码、多余空格、不可见字符
 - 自动分块、去重、生成检索知识库
+
 **2. 私有知识库检索**
 - 向量检索：理解语义，智能匹配相似内容
 - BM25 检索：关键词精准匹配
 - 混合结果合并去重，返回最相关片段
+
 **3. 智能问答（RAG）**
 - 严格依据文档内容回答
 - 无答案时返回：未找到相关答案
 - 不编造、不扩展、不泄露外部信息
 - 支持参考原文溯源
+
 **4. 生产级 API 服务**
 - 健康检查接口 /health
 - 文档上传接口 /upload_doc
 - 智能问答接口 /qa
 - 标准化 JSON 响应
 - 完整异常处理
+
 **5. 部署友好**
 - 支持本地运行
 - 支持 Docker 部署
@@ -68,11 +72,13 @@ rag-project/
 GET /health
 ```
 返回服务运行状态。
+
 **2. 上传文档**
 ```markdown
 POST /upload_doc
 ```
 支持文件：pdf / docx / txt自动解析 → 分块 → 构建检索索引。
+
 **3. 知识库问答**
 ```markdown
 POST /qa
@@ -85,25 +91,30 @@ POST /qa
 git clone https://github.com/AvrilJF/rag-knowledge-base.git
 cd rag-qa-api
 ```
+
 2. 创建虚拟环境（推荐）
 ```bash
 conda create -n rag python=3.10
 conda activate rag
 ```
+
 3. 安装依赖
 ```bash
 pip install -r requirements.txt
 ```
+
 4. 配置环境变量
 在项目根目录创建 .env 文件：
 ```env
 DASHSCOPE_API_KEY=你的阿里云百炼API Key
 HF_ENDPOINT=https://hf-mirror.com
 ```
+
 5. 启动服务
 ```bash
 python main.py
 ```
+
 6. 访问 API 文档
 浏览器打开：
 ```plaintext
@@ -112,6 +123,7 @@ http://127.0.0.1:8000/docs
 即可看到可视化接口界面，支持直接测试。
 ![alt text](static/qa.png)
 ![alt text](static/upload.png)
+
 ## 🐳 Docker 部署（可选）
 ```yaml
 # docker-compose.yml
@@ -131,6 +143,7 @@ services:
 ```bash
 docker-compose up -d
 ```
+
 ## 🎯 使用流程
 1. 启动服务
 2. 访问 /docs
