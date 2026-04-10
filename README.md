@@ -54,6 +54,7 @@
 - Hugging Face 国内镜像自动加速
 
 ## 📁 项目文件结构
+```
 rag-project/
 ├── rag/                      # RAG核心模块
 │   ├── document_loader.py    # 文档加载、解析、分块
@@ -65,6 +66,7 @@ rag-project/
 ├── .env                      # 本地环境配置（密钥）
 ├── requirements.txt          # 依赖库
 └── README.md                 # 项目说明
+```
 
 ## 🧩 接口说明
 **1. 健康检查**
