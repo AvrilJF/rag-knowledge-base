@@ -1,4 +1,8 @@
 # -------------------------- 文档加载 / 解析 工具类 --------------------------
+import logging
+# 屏蔽pdfplumber的FontBBox警告
+logging.getLogger("pdfplumber").setLevel(logging.ERROR)
+
 # 导入操作系统相关模块，用于处理文件路径、文件后缀
 import os
 

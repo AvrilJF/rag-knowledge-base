@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 
 # 导入读取本地.env配置文件的工具（用来存密钥、配置信息）
 from dotenv import load_dotenv  # 用于加载本地.env文件
+from pydantic import BaseModel  # 新增：规范请求体
 
 # ===================== 核心兼容逻辑（本地+Docker）=====================
 # 1. 加载本地.env文件（本地运行时生效，Docker运行时无影响）
@@ -34,9 +35,8 @@ os.environ["DASHSCOPE_API_KEY"] = DASHSCOPE_API_KEY
 
 # 设置 huggingface 国内镜像地址，没有配置就用默认的，保证模型下载不失败
 os.environ["HF_ENDPOINT"] = os.getenv("HF_ENDPOINT", "https://hf-mirror.com")  # 默认值兜底
-# ====================================================================
 
-# 导入自己写的RAG功能模块：
+# ========================导入自定义RAG功能模块============================================
 # DocumentLoader = 文档加载器，用来读取PDF/Word等文件
 from rag.document_loader import DocumentLoader
 
@@ -46,27 +46,43 @@ from rag.retriever import HybridRetriever
 # AnswerGenerator = 答案生成器，调用大模型生成回答
 from rag.generator import AnswerGenerator
 
-# 初始化FastAPI网页服务，设置项目名称、版本、描述
+# 创建全局的检索工具对象（找答案用）
+# retriever = HybridRetriever()
+# 【优化】仅声明，不全局实例化，避免主进程/子进程重复加载
+retriever = None
+# 创建全局的答案生成对象（调用AI用），会自动读取环境变量
+# generator = AnswerGenerator()
+generator = None
+# 创建全局的文档加载对象（读文件用）
+loader = DocumentLoader()# loader无模型，可全局初始化
+
+
+# ===========================FastAPI网页服务=========================================
+# 初始化：设置项目名称、版本、描述
 #app = 你的整个Web服务，一个大管家，管理所有接口
 app = FastAPI(
     title="RAG企业私有知识库问答系统",
     version="1.0",
-    description="兼容本地.env + Docker环境变量的最终版"
+    description="基于检索增强生成RAG的私有知识库API服务"
 )
+# 新增：定义问答请求体模型，规范参数
+class QARequest(BaseModel):
+    question: str
 
-# 创建全局的检索工具对象（找答案用）
-retriever = HybridRetriever()
-
-# 创建全局的答案生成对象（调用AI用），会自动读取环境变量
-generator = AnswerGenerator()
-
-# 创建全局的文档加载对象（读文件用）
-loader = DocumentLoader()
 
 # 创建一个叫 uploads 的文件夹，用来存用户上传的文件
 # exist_ok=True 表示如果文件夹已存在，就不重复创建
 os.makedirs("uploads", exist_ok=True)
+os.makedirs("data", exist_ok=True)
 
+# 【核心优化】应用启动时一次性初始化所有模型（仅加载1次）
+@app.on_event("startup")
+async def startup_event():
+    global retriever, generator
+    # 仅在应用启动时初始化一次，彻底避免重复加载
+    retriever = HybridRetriever()
+    generator = AnswerGenerator()
+    print("✅ 所有模型初始化完成，仅加载1次")
 # ===================== 1. 上传文档接口 =====================
 # 接口地址：/upload_doc
 # 功能：用户上传文件 → 系统读取 → 存入知识库
@@ -74,7 +90,7 @@ os.makedirs("uploads", exist_ok=True)
 #@装饰器：给下面的函数 “贴标签、注册、绑定”，不强制同名，中间不能有其他代码，否则绑定失败。可以有空行/注释
 # 异步函数：接收用户上传的文件，支持PDF/Word/TXT
 async def upload_doc(file: UploadFile = File(..., description="支持PDF/Word/TXT格式")):
-    #file变量名 :类型标注符号、UploadFile上传文件的类型(FastApi专用)、File来自上传、...必须上传 不传就报错
+    #file变量名、 :类型标注符号、UploadFile上传文件的类型(FastApi专用)、File来自上传、...必须上传 不传就报错
     try:  # 尝试执行下面的代码，如果出错会跳到except
         # 拼接文件保存路径：uploads/文件名
         file_path = f"uploads/{file.filename}"#f是Python的字符串格式化符号，让字符串里的{变量}能被自动替换成真实的值
@@ -115,16 +131,19 @@ async def upload_doc(file: UploadFile = File(..., description="支持PDF/Word/TX
 # 功能：用户提问 → 系统检索知识库 → AI生成答案
 @app.post("/qa", summary="知识库问答（需先上传文档）")
 # 异步函数：接收用户的问题
-async def qa(question: str = None, description="用户提问内容"):#None默认值
-    # 不写=None表明参数必填，用户不传FastAPI直接拦截报错，不往下跑了
+# async def qa(question: str = None, description="用户提问内容"):#None默认值
+    # 不写=None表明参数必填，用户不传-->FastAPI直接拦截报错，不往下跑了
+@app.post("/qa", summary="知识库问答（需先上传文档）")
+async def qa(request: QARequest):
     try:
-        # 如果用户没输入问题，直接报错
-        if not question:
+        question = request.question
+        # 如果用户输入问题为空，直接报错
+        if not question.strip():
             raise ValueError("提问内容不能为空")
-        
+
         # 从知识库中检索和问题相关的内容，最多找5条
         context = retriever.retrieve(question, top_k=5)
-        
+
         # 如果没找到相关内容，直接返回未找到
         if not context:
             return JSONResponse(
@@ -135,10 +154,10 @@ async def qa(question: str = None, description="用户提问内容"):#None默认
                     "context": []
                 }
             )
-        
+
         # 调用大模型，根据问题+检索到的内容生成答案
         answer = generator.generate(question, context)
-        
+
         # 返回最终结果：问题、答案、参考资料
         return JSONResponse(
             content={
@@ -155,7 +174,11 @@ async def qa(question: str = None, description="用户提问内容"):#None默认
     
     # 服务错误返回500
     except Exception as e:
+        # 捕获所有异常，返回友好提示，避免500
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"问答失败：{str(e)}")
+
 
 # ===================== 3. 健康检查接口 =====================
 # 接口地址：/health
@@ -166,7 +189,8 @@ async def health_check():
         content={
             "code": 200,
             "status": "success",
-            "msg": "RAG服务运行正常"
+            "msg": "RAG服务运行正常",
+	        "index_status": "已构建" if retriever.index is not None else "未构建"
         }
     )
 
@@ -200,6 +224,10 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True,  # 开发模式自动重载
-        log_level="info"
+        reload=False,  # 开发模式自动重载：开发环境保留，生产环境改为False
+        log_level="info",
+        workers=1  # 单进程模式，避免多进程索引不同步
     )
+
+# http://127.0.0.1:8000/docs
+# http://127.0.0.1:8000
