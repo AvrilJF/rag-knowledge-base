@@ -18,9 +18,10 @@
 - **无前端依赖**：纯 API 服务，可对接任何前端、小程序、APP、钉钉机器人
 
 ## 🧠 系统架构
-```markdown
+```
 用户上传文档 → 文档解析 → 文本清洗 → 智能分块 → 向量化 → 构建检索索引
-用户提问 → 混合检索（向量+BM25）→ 大模型生成答案 → 返回 JSON 结果```
+用户提问 → 混合检索（向量+BM25）→ 大模型生成答案 → 返回 JSON 结果
+```
 
 ## 🚀 核心功能
 **1. 文档上传与自动解析**
@@ -64,41 +65,50 @@ rag-project/
 ## 🧩 接口说明
 **1. 健康检查**
 ```markdown
-GET /health```
+GET /health
+```
 返回服务运行状态。
 **2. 上传文档**
 ```markdown
-POST /upload_doc```
+POST /upload_doc
+```
 支持文件：pdf / docx / txt自动解析 → 分块 → 构建检索索引。
 **3. 知识库问答**
 ```markdown
-POST /qa```
+POST /qa
+```
 参数：question返回：答案 + 参考上下文
 
 ## 🛠 快速开始
 1. 克隆项目
 ```bash
 git clone https://github.com/AvrilJF/rag-knowledge-base.git
-cd rag-qa-api```
+cd rag-qa-api
+```
 2. 创建虚拟环境（推荐）
 ```bash
 conda create -n rag python=3.10
-conda activate rag```
+conda activate rag
+```
 3. 安装依赖
 ```bash
-pip install -r requirements.txt```
+pip install -r requirements.txt
+```
 4. 配置环境变量
 在项目根目录创建 .env 文件：
 ```env
 DASHSCOPE_API_KEY=你的阿里云百炼API Key
-HF_ENDPOINT=https://hf-mirror.com```
+HF_ENDPOINT=https://hf-mirror.com
+```
 5. 启动服务
 ```bash
-python main.py```
+python main.py
+```
 6. 访问 API 文档
 浏览器打开：
 ```plaintext
-http://127.0.0.1:8000/docs```
+http://127.0.0.1:8000/docs
+```
 即可看到可视化接口界面，支持直接测试。
 ![alt text](static/qa.png)
 ![alt text](static/upload.png)
@@ -115,10 +125,12 @@ services:
       - DASHSCOPE_API_KEY=你的密钥
     volumes:
       - ./uploads:/app/uploads  # 持久化上传的文档
-    restart: always```
+    restart: always
+```
 启动
 ```bash
-docker-compose up -d```
+docker-compose up -d
+```
 ## 🎯 使用流程
 1. 启动服务
 2. 访问 /docs
