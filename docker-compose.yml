@@ -8,7 +8,7 @@ services:
     environment:
       # - QIANFAN_AK=你的通义千问AK  # 替换成自己的
       # - QIANFAN_SK=你的通义千问SK
-      - DASHSCOPE_API_KEY=sk-ffd9c7d00ad94ebbbdd93d849dcf0721
+      - DASHSCOPE_API_KEY=你的密钥
     volumes:
       - ./uploads:/app/uploads  # 持久化上传的文档
     restart: always
